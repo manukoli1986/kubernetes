@@ -1,0 +1,43 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx 
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: pvc-local-1
+      volumes:
+      - name: pvc-local-1
+        persistentVolumeClaim:
+          claimName: pvc-local-1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      nodePort: 30180
+  selector:
+    app: nginx
