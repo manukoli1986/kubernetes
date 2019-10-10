@@ -1,0 +1,262 @@
+
+
+
+
+
+
+Master nodes:10.56.110.199/198/197
+10.20.110.199 P1APB--KUB06  
+10.20.110.198 P1APB--KUB05 
+10.20.110.197 P1APB--KUB04 
+10.20.110.196 P1APB--KUB04 
+
+/etc/hosts
+swapoff /dev/mapper/RootVg-swap
+swapoff -a
+free -h
+vim /etc/fstab
+mount -a
+
+Installing kubeadm, kubelet and kubectl
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+cat <<EOF> /etc/yum.repos.d/docker.repo
+[docker-ce-stable]
+name=Docker CE Stable - $basearch
+baseurl=https://download.docker.com/linux/centos/7/$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-stable-debuginfo]
+name=Docker CE Stable - Debuginfo $basearch
+baseurl=https://download.docker.com/linux/centos/7/debug-$basearch/stable
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-stable-source]
+name=Docker CE Stable - Sources
+baseurl=https://download.docker.com/linux/centos/7/source/stable
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-edge]
+name=Docker CE Edge - $basearch
+baseurl=https://download.docker.com/linux/centos/7/$basearch/edge
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-edge-debuginfo]
+name=Docker CE Edge - Debuginfo $basearch
+baseurl=https://download.docker.com/linux/centos/7/debug-$basearch/edge
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-edge-source]
+name=Docker CE Edge - Sources
+baseurl=https://download.docker.com/linux/centos/7/source/edge
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-test]
+name=Docker CE Test - $basearch
+baseurl=https://download.docker.com/linux/centos/7/$basearch/test
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-test-debuginfo]
+name=Docker CE Test - Debuginfo $basearch
+baseurl=https://download.docker.com/linux/centos/7/debug-$basearch/test
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-test-source]
+name=Docker CE Test - Sources
+baseurl=https://download.docker.com/linux/centos/7/source/test
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-nightly]
+name=Docker CE Nightly - $basearch
+baseurl=https://download.docker.com/linux/centos/7/$basearch/nightly
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-nightly-debuginfo]
+name=Docker CE Nightly - Debuginfo $basearch
+baseurl=https://download.docker.com/linux/centos/7/debug-$basearch/nightly
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+
+[docker-ce-nightly-source]
+name=Docker CE Nightly - Sources
+baseurl=https://download.docker.com/linux/centos/7/source/nightly
+enabled=0
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/centos/gpg
+EOF
+
+
+# Set SELinux in permissive mode (effectively disabling it)
+setenforce 0
+sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+systemctl enable --now kubelet
+
+cat <<EOF >  /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system
+
+Set the following firewall rules.
+firewall-cmd --permanent --add-port=6443/tcp
+firewall-cmd --permanent --add-port=2379-2380/tcp
+firewall-cmd --permanent --add-port=10250/tcp
+firewall-cmd --permanent --add-port=10251/tcp
+firewall-cmd --permanent --add-port=10252/tcp
+firewall-cmd --permanent --add-port=10255/tcp
+firewall-cmd --reload
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+lsmod | grep br_netfilter
+modprobe br_netfilter
+
+yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes 
+rpm -ivh http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.74-1.el7.noarch.rpm --nodeps
+yum install policycoreutils-python docker-ce  -y 
+sysctl net.bridge.bridge-nf-call-iptables=1
+
+
+Docker - proxy
+mkdir /etc/systemd/system/docker.service.d && mkdir /etc/systemd/system/kubelet.service.d/
+
+cat << EOF > /etc/systemd/system/docker.service.d/http-proxy.conf
+[Service]
+Environment="HTTP_PROXY=http://10.56.108.156:4145/" "NO_PROXY=localhost,127.0.0.0/8"
+EOF
+
+Add in below file
+/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"
+Environment="KUBELET_EXTRA_ARGS=--cgroup-driver=cgroups"
+
+
+wget https://raw.githubusercontent.com/coreos/flannel/62e44c867a2846fefb68bd5f178daf4da3095ccb/Documentation/kube-flannel.yml
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/62e44c867a2846fefb68bd5f178daf4da3095ccb/Documentation/kube-flannel.yml
+
+
+
+cat << EOF > /etc/systemd/system/kubelet.service.d/20-etcd-service-manager.conf
+[Service]
+ExecStart=
+#  Replace "systemd" with the cgroup driver of your container runtime. The default value in the kubelet is "cgroupfs".
+ExecStart=/usr/bin/kubelet --address=127.0.0.1 --pod-manifest-path=/etc/kubernetes/manifests --cgroup-driver=systemd
+Restart=always
+EOF
+
+
+
+systemctl daemon-reload && systemctl show docker --property Environment && systemctl restart docker
+
+
+
+Issue ----
+kubeadm init --pod-network-cidr "10.200.0.0/16" --service-cidr "10.32.0.0/16"
+docker-ce
+CNI Plugin
+network
+"kubectl get componentstatuses"
+Kubelet was not running / issue with TLS handshake
+
+
+
+kubeadm init --pod-network-cidr "10.200.0.0/16" --service-cidr "10.32.0.0/16"
+
+kubeadm init --config=kubeadm-config.yaml --upload-certs
+
+kubectl create clusterrolebinding cluster-system-anonymous --clusterrole=cluster-admin --user=system:anonymous
+
+####################################### Output 
+Your Kubernetes control-plane has initialized successfully!
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+You can now join any number of the control-plane node running the following command on each as root:
+
+  kubeadm join 10.56.108.156:6443 --token dekbfe.xsco571qqsyliqli \
+    --discovery-token-ca-cert-hash sha256:a187c492303b9236e1e83b7e3ecd5dfa43cc532621cc2bb43ebe9c85aa614008 \
+    --control-plane --certificate-key 6e94d370c8da5b8c58a58afa484aa603960dc05c71ae8a72681484a15ec2e03f
+
+Please note that the certificate-key gives access to cluster sensitive data, keep it secret!
+As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you can use
+"kubeadm init phase upload-certs --upload-certs" to reload certs afterward.
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 10.56.108.156:6443 --token dekbfe.xsco571qqsyliqli \
+    --discovery-token-ca-cert-hash sha256:a187c492303b9236e1e83b7e3ecd5dfa43cc532621cc2bb43ebe9c85aa614008
+	
+##### Incase you want to join new node to cluster and keys have expired then using below command regenerates keys and certs 
+# kubeadm token list
+TOKEN                     TTL       EXPIRES                     USAGES                   DESCRIPTION                                           EXTRA GROUPS
+dekbfe.xsco571qqsyliqli   23h       2019-08-10T11:15:12+05:30   authentication,signing   <none>                                                system:bootstrappers:kubeadm:default-node-token
+e8xwjv.bwvqcgk8vvu0olhw   1h        2019-08-09T13:15:12+05:30   <none>                   Proxy for managing TTL for the kubeadm-certs secret   <none>
+
+Generate Certs
+# kubeadm init phase upload-certs --upload-certs
+
+Generate Keys
+#  kubeadm token create --ttl 10m --print-join-command
+
+###########################################################################################################
+
+
+Need to open port range 30000-40000 from 108.156 to 110.196/195/194 - So that we can access deployed app on Nodeport from worker node
+
+Routing info
+10.200.0.0/24 via 10.20.110.196
+
+##############
+Dashboard issue
+
+https://github.com/kubernetes/dashboard/blob/master/docs/user/accessing-dashboard/1.7.x-and-above.md
+kubectl proxy --address=10.56.108.156 --api-prefix=/
+kubectl port-forward -n kubernetes-dashboard service/kubernetes-dashboard 10443:443 --address 0.0.0.0
+
+URL -- http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#/login
+==========================================
+ssh forward tunnel
+ssh.exe -v -L 8001:127.0.0.1:8001 -N -f -l volt 10.56.110.199
+
+kubectl describe secret  kubernetes-dashboard-token-qmh5h -n kubernetes-dashboard
+
+
+
