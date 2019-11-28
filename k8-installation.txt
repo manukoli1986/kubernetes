@@ -1,14 +1,9 @@
 
-
-
-
-
-
 Master nodes:10.56.110.199/198/197
-10.20.110.199 P1APB--KUB06  
-10.20.110.198 P1APB--KUB05 
-10.20.110.197 P1APB--KUB04 
-10.20.110.196 P1APB--KUB04 
+10.20.110.199 KUB06  
+10.20.110.198 KUB05 
+10.20.110.197 KUB04 
+10.20.110.196 KUB04 
 
 /etc/hosts
 swapoff /dev/mapper/RootVg-swap
@@ -257,6 +252,42 @@ ssh forward tunnel
 ssh.exe -v -L 8001:127.0.0.1:8001 -N -f -l volt 10.56.110.199
 
 kubectl describe secret  kubernetes-dashboard-token-qmh5h -n kubernetes-dashboard
+
+=========================================== 
+
+INGRESS
+
+Service - Ingress 
+
+#cat service-nodeport.yaml     ## USing node port as I have opened FW connectivity to this Kube cluster master nodes.( 
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 443
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    
+    
+
+
+
+
 
 
 
