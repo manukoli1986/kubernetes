@@ -1,0 +1,33 @@
+First master ------
+
+First install latest kubeadm 
+yum install -y kubeadm-1.17.0-0 --disableexcludes=kubernetes
+then drain master node where you install latest kubeadm
+kubectl drain kub05
+then run kubeadm upgrade plan on any master node. 
+kubeadm upgrade plan
+kubeadm upgrade apply v1.17.0
+then apply it
+then uncordon that node 
+kubectl uncordon kub05
+then install latest kubectl and kubelet on same master node and restart kubelet service
+yum install -y kubelet-1.17.0-0 kubectl-1.17.0-0 --disableexcludes=kubernetes
+
+
+
+
+
+Other master node--------
+
+First install latest kubeadm
+then run kubeadm upgrade node - it will fetch all latest images from another updated master node. 
+then uncordon that node 
+then install latest kubectl and kubelet on same master node and restart kubelet service
+
+Worker node---------
+First drain
+then install all latest kubeadm,kubectl,kubelet and restart kubelet service
+uncordon worker node
+yum install -y kubeadm-1.17.0-0 --disableexcludes=kubernetes
+then install latest kubectl and kubelet on same master node and restart kubelet service
+yum install -y kubelet-1.17.0-0 kubectl-1.17.0-0 --disableexcludes=kubernetes
