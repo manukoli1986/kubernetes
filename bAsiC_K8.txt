@@ -1,0 +1,55 @@
+What is gRPC and why we need?
+A: gRPC is open source framework desgined by Google and now contibuiting by developers. 
+
+Why: It makes our task easy and simple to call RPC call like a simple method to remote call from remote server as it treats as it is found in local.
+We can not create new APIs with below attributes so thats why we have gRPC, which is being used by tools like today we are going to learn Kubernetes.
+Kubernetes: which is totally uses API call. 
+
+
+A: What we require to build a simple RPC call is mentioned below:
+ api endpoint -- GET/POST
+ latency
+ scalable 1000 /clients
+ security
+ authentication
+ compatible with all languages
+ api error handling
+ responce return type - xml,json,binay
+ too much data to handle
+ too little data to handle -prob ( we have to make multiple api calls)
+
+Need a framework - like gRPC developmed by Google. On high level, it will allow you to define request n responce for all remote procedure call (RPC)
+
+Why We need Kubernetes when we had Docker-swarm ?
+As docker-swarm can with work with stack but due to lack of orachestration of an application which is deployed and managing with large volume of cluster nodes. Kubernetes runs all 
+resources independently and but which works dependently and provide and complete solution of rorchestration. 
+
+
+Major Components for Master Node: 
+Kube-api --> Solely and backbone tool which communicates with all componenets in cluster. It needs be secure while communicating to other components i.e. api calls should be in TLS.
+When client connects to Kube-api, their SAN name should be mentioned so that Kubeconfig can understand client as trusted client other wise, new client can access api calls.
+
+Etcd --> Core DB which stores Cluster states information in Key and value. It requires Low Latency RTT and high Thourghoutput. It needs to be run on quorum so that we can have HA etcd. ETCD HA works on Leader Election Bases
+mechanism and when any ETCD node is down then new leader will be elected on beses on short time of Request time leave. 
+Reason of ETCD NODE failed: DUe to network latency and disk I/O during talking to other ETCD members , there will be instability and unstable cluster. Which then can't accept new tasks from Kube-Api.
+To Querry Etcd Cluster:
+# kubectl get pod -- This will hit a API call which will be using gRPC call and return required responce.
+
+Scheduler --> Most interesting components in master, by this we can design ow we want to schedule our pods, although it has default feture to descide which Nodes is Best for pods on bases of 
+filter ( Node with enough resource i.e. Ram, cup, disk and remove those nodes which does not fit in crieteria ) and ranking ( Rank only those which is left and then rank them which is having high resources.)
+Although we can create custom on below resources on bases on below:
+    taint
+    tolenrances
+    affinity
+    anti-afiinity
+    nodesechuler
+
+
+Controller --> Another imporant tool which takes care of Pods which will run in RS/Deployment/Daemonset etc... It defaults run many controllers i.e. RS/Deployment/Daemonset.
+It evicts pod in case of nodes is going down.
+i.e. first - controller checks every 5s status of Nodes
+     second - if nodes is not reponsive till 40s then it will mark it unhelathy
+     third - Then after 5m it will evict all pods and move it to next available nodes. 
+
+
+
