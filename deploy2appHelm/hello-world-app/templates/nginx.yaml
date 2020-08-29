@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.nginx.service.name }}
+spec:
+  type: {{ .Values.nginx.service.type }}
+  ports:
+  - protocol: TCP
+    port: {{ .Values.nginx.service.port }}
+    name: http
+    nodePort: {{ .Values.nginx.service.targetPort }}
+  selector:
+    app: {{ .Values.nginx.service.selector.app }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.nginx.deployment.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.nginx.deployment.selector.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.nginx.deployment.selector.app }}
+    spec:
+      containers:
+      - name: {{ .Values.nginx.deployment.name }}
+        image: nginx
+        ports:
+        - containerPort: {{ .Values.nginx.deployment.containerPort }}
+        volumeMounts:
+        - mountPath: /etc/nginx/conf.d/default.conf # mount nginx-conf volumn to /etc/nginx
+          name: nginx-configuration
+          subPath: default.conf
+      volumes:
+      - name: nginx-configuration
+        configMap:
+          name: nginxconfigmap # place ConfigMap `nginx-conf` on /etc/nginx

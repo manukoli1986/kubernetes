@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.helloWorld.service.name }}
+spec:
+  type: {{ .Values.helloWorld.service.type }}
+  ports:
+  - port: {{ .Values.helloWorld.service.port }}
+    targetPort: {{ .Values.helloWorld.service.targetPort }}
+  selector:
+    app: {{ .Values.helloWorld.service.selector.app }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.helloWorld.deployment.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.helloWorld.deployment.selector.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.helloWorld.deployment.selector.app }}
+    spec:
+      containers:
+      - name: {{ .Values.helloWorld.deployment.name }}
+        image: paulbouwer/hello-kubernetes:1.8
+        ports:
+        - containerPort: {{ .Values.helloWorld.deployment.containerPort }}

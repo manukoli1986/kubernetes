@@ -1,0 +1,33 @@
+# Default values for hello-world-app.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# replicaCount: 1
+
+helloWorld:
+  service:
+    name: hello-world
+    selector:
+      app: hello-world
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  deployment:
+    name: hello-world
+    selector:
+      app: hello-world
+    containerPort: 8080
+
+nginx:
+  service:
+    name: nginx
+    selector:
+      app: nginx
+    type: LoadBalancer
+    port: 80
+    targetPort: 30300
+  deployment:
+    name: nginx
+    selector:
+      app: nginx
+    containerPort: 80
